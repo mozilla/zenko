@@ -17,7 +17,7 @@ from re import search
 from itertools import chain
 
 import psycopg2
-from login import login_string #login details, not committed
+from zenko.login import login_string #login details, not committed
 
 ############# Basic caching and setup ##################
 

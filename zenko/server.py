@@ -8,7 +8,7 @@ from datetime import datetime
 from pdb import set_trace
 from webbrowser import open as open_webpage
 from flask import Flask, render_template, request, make_response
-import redshift
+import zenko.redshift as redshift
 app = Flask(__name__)
 
 #set up database connection
