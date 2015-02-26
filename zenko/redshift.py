@@ -28,7 +28,7 @@ def cursor():
 
 def build_tiles_cache(cursor):
 	"""Saves a version of the tiles as JSON to the local directory. Only does this once every 24 hours"""
-	
+
 	#check if it actually needs updating
 	redownload = False
 	try:
@@ -37,12 +37,12 @@ def build_tiles_cache(cursor):
 		else:
 			with copen("tiles.cache", 'r', 'utf8') as f:
 				cache = load(f)          #get the timestamp and convert to datetime
-				last_updated = datetime.strptime(cache['last_updated'], "%Y-%m-%d %H:%M:%S.%f") 
+				last_updated = datetime.strptime(cache['last_updated'], "%Y-%m-%d %H:%M:%S.%f")
 				if (datetime.now()-last_updated).days > 0:
 					redownload = True
 	except Exception: #yolo
 		redownload = True
-	
+
 	if redownload:
 		print "Refreshing tiles cache from remote server (will take ~2 seconds)..."
 		#get the tiles
@@ -85,14 +85,14 @@ def build_tiles_cache(cursor):
 		print "done"
 	else:
 		print "Finished loading tiles cache"
-	
+
 	del cache['last_updated'] #not useful when querying
 	return cache
 
 def build_mozilla_tile_list(cache):
 	"""Finds mozilla tiles in the cache. This is complicated because there is currently no separate Advertiser/Client table.
 	Returns an object with them"""
-	
+
 	mozilla_tiles = [
 		{
 			"name": "Customize Firefox",
@@ -179,7 +179,7 @@ def build_mozilla_tile_list(cache):
 			'url_must_match': ['https://www.mozilla.com/firefox/tiles']
 		}
 	]
-	
+
 	#make sure ruleset is OK
 	for x in mozilla_tiles:
 		for k, v in x.iteritems():
@@ -187,22 +187,22 @@ def build_mozilla_tile_list(cache):
 				if type(v) != list:
 					print "Error in ruleset!"
 					return False
-	
+
 	#get sponsored tiles first so we know which ones to ignore
 	sponsored = set(get_sponsored_client_list(cache))
-	
+
 	#find matches
 	for x in range(len(mozilla_tiles)):
 		if len(mozilla_tiles[x]) > 1: #must have some sort of rule definition
 			mozilla_tiles[x]['ids'] = [] #add container
-			
+
 			#print "Processing Rule {0} ({1})".format(x, mozilla_tiles[x]['name'])
-			
+
 			#number of tests that need passing
 			test_count = len([y for y in mozilla_tiles[x] if 'match' in y])
-			
+
 			#print "Tests to pass: {0}".format(test_count)
-			
+
 			for tile_id, tile_info in cache.iteritems():
 				tests_passed = 0
 				if 'url_must_match' in mozilla_tiles[x]:
@@ -210,25 +210,25 @@ def build_mozilla_tile_list(cache):
 						if matcher in tile_info['target_url']:
 							tests_passed += 1
 							break
-				
+
 				if 'title_must_match' in mozilla_tiles[x]:
 					for matcher in mozilla_tiles[x]['title_must_match']:
 						if matcher in tile_info['title']:
 							tests_passed += 1
 							break
-				
+
 				if tests_passed >= test_count:
 					mozilla_tiles[x]['ids'].append(tile_id)
 					#print tile_id, tile_info['title'], tile_info['target_url']
-			
+
 			mozilla_tiles[x]['ids'] = set(mozilla_tiles[x]['ids'])
 			#print "{0} tiles matched".format(len(mozilla_tiles[x]['ids']))
-	
+
 	#output what is left uncategorized
 	already = set(chain.from_iterable([x['ids'] for x in mozilla_tiles if 'ids' in x]))
-	
+
 	#print "Already categorized {0}/{1} tiles".format(len(already), len(cache))
-	
+
 	for tile_id, tile_info in cache.iteritems():
 		if tile_id not in already:
 			if tile_info['title'] not in sponsored:
@@ -242,7 +242,7 @@ def build_mozilla_tile_list(cache):
 				same = set(tile['ids']).intersection(other_tile['ids'])
 				if len(same) > 0:
 					print "Warning! {0} are in {1} and {2}".format(same, tile['name'], other_tile['name'])
-	
+
 	return mozilla_tiles
 
 ######### Querying client/tile data ###########
@@ -268,7 +268,7 @@ def get_sponsored_client_list(cache):
 		if x['type'] == "sponsored":
 			if "/" not in x['title']:
 				clients.update([x['title']])
-	
+
 	clients.update(['Mozilla'])
 	return sorted(list(clients))
 
@@ -287,7 +287,7 @@ def get_mozilla_meta_data(cache, mozilla_tiles, campaign_name=False, locale=Fals
 		'Campaign start date': datetime.now(),
 		'Campaign': campaign_name if campaign_name else "All Campaigns"
 	}
-	
+
 	for campaign in mozilla_tiles:
 		if campaign_name:
 			if campaign['name'] != campaign_name:
@@ -302,7 +302,7 @@ def get_mozilla_meta_data(cache, mozilla_tiles, campaign_name=False, locale=Fals
 			created_at = datetime.strptime(tile['created_at'], "%Y-%m-%d %H:%M:%S.%f")
 			if data['Campaign start date'] > created_at:
 				data['Campaign start date'] = created_at
-	
+
 	#now turn into a list of lists
 	data["Locales"] = ", ".join(sorted(list(data['Locales'])))
 	data['Tile IDs'] = ", ".join(sorted(data['Tile IDs']))
@@ -311,7 +311,7 @@ def get_mozilla_meta_data(cache, mozilla_tiles, campaign_name=False, locale=Fals
 
 def get_client_meta_data(cache, client=False, locale=False):
 	"""Compiles all the client tiles entries in the tiles database and returns them as a list of lists to be entabulated"""
-	
+
 	data = {
 		'Tile IDs': [],
 		'Locales': set(),
@@ -319,7 +319,7 @@ def get_client_meta_data(cache, client=False, locale=False):
 		'client': client
 	}
 	client = client.lower()
-	
+
 	for tile_id, tile in cache.iteritems():
 		if client in tile['title'].lower():
 			if locale:
@@ -330,7 +330,7 @@ def get_client_meta_data(cache, client=False, locale=False):
 			created_at = datetime.strptime(tile['created_at'], "%Y-%m-%d %H:%M:%S.%f")
 			if data['Client start date'] > created_at:
 				data['Client start date'] = created_at
-	
+
 	#now turn into a list of lists
 	data["Locales"] = ", ".join(sorted(list(data['Locales'])))
 	data['Tile IDs'] = ", ".join(sorted(data['Tile IDs']))
@@ -358,7 +358,7 @@ def get_tiles_per_client(cache, client):
 
 def get_countries_per_client(cache, mozilla_tiles=False, client=False, locale=False, campaign=False):
 	"""Gets a list of countries that a particular tile ID ran in"""
-	
+
 	countries = set()
 	if client == "Mozilla":
 		#get relevant tile ids, accomodating for the campaign
@@ -368,7 +368,7 @@ def get_countries_per_client(cache, mozilla_tiles=False, client=False, locale=Fa
 				if campaign != tile['name']:
 					continue
 			tiles += tile['ids']
-		#get the countries that they run in 
+		#get the countries that they run in
 		for tile_id in tiles:
 			info = cache[tile_id]
 			if locale:
@@ -383,7 +383,7 @@ def get_countries_per_client(cache, mozilla_tiles=False, client=False, locale=Fa
 						countries.update(x['countries'])
 				else:
 					countries.update(x['countries'])
-	
+
 	return sorted(countries)
 
 def get_countries_per_tile(cache, tile_id):
@@ -402,15 +402,15 @@ def get_client_attributes(cursor, cache, client):
 	"""For a given tile id, gets all possible locales, countries and campaign start dates.
 	This is useful for the drop down menus.
 	Accepts an integer tile id and returns a dictionary of lists"""
-	
+
 	attributes = {
 		'locales': [],
 		'countries': [],
 	}
-	
+
 	attributes['countries'] = get_countries_per_client(cache, client=client)
 	attributes['locales'] = get_locales_per_client(cache, client)
-	
+
 	return attributes
 
 ########## Engagement ###########
@@ -418,38 +418,38 @@ def get_client_attributes(cursor, cache, client):
 def add_engagement_metrics(impressions_data):
 	"""Accepts some daily impressions data.
 	Tacks on a few more columns with various engagement metrics for testing"""
-	
+
 	#Impressions data arrives in the format:
 	#[[date, impressions, clicks, ctr%, pins, blocks, js_date]]
-	
+
 	#remove the js_date
 	impressions_data = [x[:-1] for x in impressions_data]
-	
+
 	#method 1: pin rank
 	impressions_data = sorted(impressions_data, key=lambda x: x[4], reverse=True)
 	impressions_data = [x+[n] for n, x in enumerate(impressions_data)]
-	
+
 	#method 2: ranked CTR
 	impressions_data = sorted(impressions_data, key=lambda x: x[3], reverse=True)
 	impressions_data = [x+[n] for n, x in enumerate(impressions_data)]
-	
+
 	#method 3: pins per block
 	impressions_data = [x+[round(x[4]/float(x[5]), 2)] if x[5] != 0 else x+[0] for x in impressions_data]
-	
+
 	#method 4: combined interaction
 	impressions_data = sorted(impressions_data, key=lambda x: x[5], reverse=True)
 	impressions_data = [x+[round(sum([x[6], x[7], n])/3.0, 2)] for n, x in enumerate(impressions_data)]
-	
+
 	#method 5: click fallout
 	impressions_data = [x+[""] for x in impressions_data]
-	
+
 	return impressions_data
 
 ########## Querying impressions data ###########
 
 def get_daily_impressions_data_for_engagement(cursor, client=False):
 	"""Gets aggregated impressions grouped by day for the engagement page, pulled from a cache"""
-	
+
 	#check cache
 	redownload = False
 	try:
@@ -458,12 +458,12 @@ def get_daily_impressions_data_for_engagement(cursor, client=False):
 		else:
 			with copen("engagement.cache", 'r', 'utf8') as f:
 				cache = load(f)          #get the timestamp and convert to datetime
-				last_updated = datetime.strptime(cache['last_updated'], "%Y-%m-%d %H:%M:%S.%f") 
+				last_updated = datetime.strptime(cache['last_updated'], "%Y-%m-%d %H:%M:%S.%f")
 				if (datetime.now()-last_updated).days > 0:
 					redownload = True
 	except Exception: #yolo
 		redownload = True
-	
+
 	if not redownload:
 		if not client:
 			client = "Dashlane"
@@ -473,20 +473,20 @@ def get_daily_impressions_data_for_engagement(cursor, client=False):
 			CREATE TEMPORARY TABLE clients (
 			  pattern VARCHAR(20)
 			);
-			
+
 			INSERT INTO clients VALUES
-			('%BBC%'), 
-			('%Booking.com%'), 
-			('%CITIZENFOUR%'), 
-			('%CVS Health%'), 
-			('%Dashlane%'), 
-			('%Outbrain Sphere%'), 
-			('%PagesJaunes%'), 
+			('%BBC%'),
+			('%Booking.com%'),
+			('%CITIZENFOUR%'),
+			('%CVS Health%'),
+			('%Dashlane%'),
+			('%Outbrain Sphere%'),
+			('%PagesJaunes%'),
 			('%Trulia%'),
 			('%TurboTax%'),
 			('%ImpôtRapide%'),
 			('%WIRED%');
-			
+
 			SELECT date, SUM (impressions) AS impressions, SUM (clicks) AS clicks, SUM (pinned) AS pins, SUM (blocked) AS blocks, title
 			FROM impression_stats_daily
 			INNER JOIN tiles ON tiles.id = impression_stats_daily.tile_id
@@ -494,13 +494,13 @@ def get_daily_impressions_data_for_engagement(cursor, client=False):
 			GROUP BY date, title
 			ORDER BY date ASC
 		""".format(client.lower())
-		
+
 		print "Creating engagement cache..."
 		cursor.execute(query)
 		data = cursor.fetchall()
-		
+
 		impressions = {}
-		
+
 		for day in data:
 			day = list(day)
 			client = day[-1] #store client
@@ -511,23 +511,23 @@ def get_daily_impressions_data_for_engagement(cursor, client=False):
 			if client not in impressions:
 				impressions[client] = []
 			impressions[client].append(day)
-		
+
 		#sort
 		for client in impressions:
 			impressions[client] = sorted(impressions[client])
-		
+
 		impressions['last_updated'] = unicode(datetime.now())
 		with copen('engagement.cache', 'w', 'utf8') as f:
 			dump(impressions, f)
 		print "done"
-		
+
 		if not client:
 			client = "Dashlane"
 		return impressions[client]
 
 def get_daily_impressions_data(cursor, tile_id=False, client=False, country='all', locale=False, tile_ids=False):
 	"""Gets aggregated impressions grouped by day"""
-	
+
 	if tile_ids:
 		#Compile together results from several tile ids, usually in the same campaign
 		if len(tile_ids) == 1:
@@ -602,11 +602,11 @@ def get_daily_impressions_data(cursor, tile_id=False, client=False, country='all
 			GROUP BY impression_stats_daily.date, countries.country_name
 			ORDER BY impression_stats_daily.date ASC;
 			""".format(tile_id, country)
-	
+
 	print query
 	cursor.execute(query)
 	data = cursor.fetchall()
-	
+
 	#insert the CTR and a javascript formatted date
 	impressions = []
 	for day in data:
@@ -618,7 +618,7 @@ def get_daily_impressions_data(cursor, tile_id=False, client=False, country='all
 
 def get_countries_impressions_data(cursor, tile_id=False, start_date=False, end_date=False, client=False, locale=False, tile_ids=False):
 	"""Gets aggregated impressions grouped by each country. This is for the country-by-country analysis"""
-	
+
 	#construct WHERE clause using parameters
 	where = []
 	if start_date:
@@ -638,13 +638,13 @@ def get_countries_impressions_data(cursor, tile_id=False, start_date=False, end_
 		else:
 			tile_ids = ", ".join(tile_ids)
 			where.append(u"tile_id in ({0})".format(tile_ids))
-	
+
 	#put into single line
 	if len(where) == 1:
 		where = "WHERE " + where[0]
 	else:
 		where = "WHERE " + ' AND '.join(where)
-	
+
 	query = u"""
 			SELECT countries.country_name, SUM (impressions) AS impressions, SUM (clicks) AS clicks, SUM (pinned) AS pins, SUM (blocked) AS blocks
 			FROM impression_stats_daily
@@ -655,10 +655,10 @@ def get_countries_impressions_data(cursor, tile_id=False, start_date=False, end_
 			ORDER BY impressions DESC;
 	""".format(where)
 	print query
-	
+
 	cursor.execute(query)
 	data = cursor.fetchall()
-	
+
 	#insert the CTR
 	impressions = []
 	for day in data:
@@ -669,7 +669,7 @@ def get_countries_impressions_data(cursor, tile_id=False, start_date=False, end_
 
 def get_locale_impressions_data(cursor, client=False, start_date=False, end_date=False, country=False, tile_id=False, tile_ids=False):
 	"""Get impressions data locale-by-locale"""
-	
+
 	#construct WHERE clause using parameters
 	where = []
 	if start_date:
@@ -689,13 +689,13 @@ def get_locale_impressions_data(cursor, client=False, start_date=False, end_date
 		else:
 			tile_ids = ", ".join(tile_ids)
 			where.append(u"tile_id in ({0})".format(tile_ids))
-	
+
 	#put into single line
 	if len(where) == 1:
 		where = "WHERE " + where[0]
 	else:
 		where = "WHERE " + ' AND '.join(where)
-	
+
 	query = u"""
 			SELECT impression_stats_daily.locale, SUM (impressions) AS impressions, SUM (clicks) AS clicks, SUM (pinned) AS pins, SUM (blocked) AS blocks
 			FROM impression_stats_daily
@@ -706,22 +706,22 @@ def get_locale_impressions_data(cursor, client=False, start_date=False, end_date
 			ORDER BY impressions DESC;
 	""".format(where)
 	print query
-	
+
 	cursor.execute(query)
 	data = cursor.fetchall()
-	
+
 	#insert the CTR and a javascript formatted date
 	impressions = []
 	for day in data:
 		day = list(day)
 		ctr = round((day[2] / float(day[1])) * 100, 5) if day[1] != 0 else 0
 		impressions.append([day[0], day[1], day[2], str(ctr)+"%", day[3], day[4]])
-	
+
 	return impressions
 
 def get_country_impressions_data(cursor, country=False):
 	"""Gets country impressions data for the 'countries' page. Not to be confused with the country-by-country analysis"""
-	
+
 	if country:
 		query = u"""SELECT date, SUM (impressions) AS impressions, SUM (clicks) AS clicks, SUM (pinned) AS pins, SUM (blocked) AS blocks
 				FROM impression_stats_daily
@@ -734,18 +734,18 @@ def get_country_impressions_data(cursor, country=False):
 				FROM impression_stats_daily
 				GROUP BY date
 				ORDER BY date"""
-	
+
 	print query
 	cursor.execute(query)
 	data = cursor.fetchall()
-	
+
 	#insert the CTR
 	impressions = []
 	for day in data:
 		day = list(day)
 		ctr = round((day[2] / float(day[1])) * 100, 5) if day[1] != 0 else 0
 		impressions.append([day[0], day[1], day[2], str(ctr), day[3], day[4]])
-	
+
 	#convert to a JSON ish format for highcharts
 	#or at least something that can be easily understood by jinja
 	#	        series: [{
@@ -754,7 +754,7 @@ def get_country_impressions_data(cursor, country=False):
 	#                [Date.UTC(1970,  9, 27), 0   ],
 	#                [Date.UTC(1971,  5, 12), 0   ]
 	#            ]}]
-	
+
 	#I think the easiest way to do this is to create a structure like:
 	#[
 	#	[
@@ -767,20 +767,20 @@ def get_country_impressions_data(cursor, country=False):
 	#	...
 	#]
 	# and then simply iterate through that in jinja
-	
+
 	column_names = [x[0] for x in cursor.description]
 	list_of_dates = ["Date.UTC({0}, {1}, {2})".format(x[0].year, x[0].month-1, x[0].day) for x in data]
 	js_data = [[x, []] for x in column_names if x != 'date']
-	
+
 	for row_index, row in enumerate(data):
 		for n, cell in enumerate(row[1:]): #ignore date
 			js_data[n][1].append([list_of_dates[row_index], cell])
-	
+
 	return js_data
 
 def get_overview_data(cursor, mozilla_tiles, cache, country=False, locale=False, start_date=False, end_date=False):
 	"""Grabs overview data"""
-	
+
 	#sort out the parameters
 	if country or locale or start_date or end_date:
 		where = []
@@ -805,47 +805,47 @@ def get_overview_data(cursor, mozilla_tiles, cache, country=False, locale=False,
 			FROM impression_stats_daily
 			GROUP BY tile_id
 		"""
-	
+
 	#grab the data from the server
 	print query
 	cursor.execute(query)
 	data = cursor.fetchall()
-	
+
 	#enter each tile's data into a dictionary referenced by id
-	#this just makes things easier later when 
+	#this just makes things easier later when
 	tile_data = {}
 	for entry in data:
 		tile_data[unicode(entry[0])] = entry[1:]
-	
+
 	#aggregate and add the data to the relevant tile entry
 	for t in range(len(mozilla_tiles)):
 		if 'client' not in mozilla_tiles[t]: #i.e. can't be sponsored tiles
 			totals = [0 for x in range(len(data[0])-1)] #create blank holder for totals per client
-			earliest_created_at = datetime.now() 
-			
+			earliest_created_at = datetime.now()
+
 			for tile in mozilla_tiles[t]['ids']:
 				if tile in tile_data: #some don't yet have data
 					stats = tile_data[tile]
 					for n, x in enumerate(stats):
 						if (type(x) != unicode) and (type(x) != str):
 							totals[n] += x #aggregate
-				
+
 				#get the earliest created_at for each campaign
 				created_at = datetime.strptime(cache[tile]['created_at'], "%Y-%m-%d %H:%M:%S.%f")
 				if created_at < earliest_created_at:
 					earliest_created_at = created_at
-			
+
 			#insert the CTR
 			ctr = round((totals[1] / float(totals[0])) * 100, 5) if totals[0] != 0 else 0
 			totals.insert(2, ctr)
-			
+
 			#add
 			mozilla_tiles[t]['stats'] = totals
 			mozilla_tiles[t]['created_at'] = "{0}-{1}-{2}".format(earliest_created_at.year, earliest_created_at.month, earliest_created_at.day)
 
 	#now we have to add in all the paid tiles
 	clients = set([x for x in get_sponsored_client_list(cache) if x != 'Mozilla'])
-	
+
 	invalid = set(["-1", "999", "16903", "16910", "20000", "900000"])
 	for client in clients:
 		to_add = {
@@ -853,7 +853,7 @@ def get_overview_data(cursor, mozilla_tiles, cache, country=False, locale=False,
 			'stats': [0 for x in range(len(data[0])-1)],
 			'earliest_created_at': datetime.now()
 		}
-		
+
 		for tile, stats in tile_data.iteritems():
 			if tile not in invalid: #some legacy thing apparently
 				title = cache[tile]['title']
@@ -864,16 +864,16 @@ def get_overview_data(cursor, mozilla_tiles, cache, country=False, locale=False,
 					created_at = datetime.strptime(cache[tile]['created_at'], "%Y-%m-%d %H:%M:%S.%f")
 					if created_at < to_add['earliest_created_at']:
 						to_add['earliest_created_at'] = created_at
-		
+
 		ctr = round((to_add['stats'][1] / float(to_add['stats'][0])) * 100, 5) if to_add['stats'][0] != 0 else 0
 		to_add['stats'].insert(2, ctr)
 		to_add['client'] = True
 		to_add['created_at'] = "{0}-{1}-{2}".format(to_add['earliest_created_at'].year, to_add['earliest_created_at'].month, to_add['earliest_created_at'].day)
-		
+
 		#now remove the existing one and replace it
 		mozilla_tiles = [x for x in mozilla_tiles if x['name'] != to_add['name']]
 		mozilla_tiles.append(to_add)
-	
+
 	return mozilla_tiles
 
 ######### Data transformations ###########
@@ -881,18 +881,18 @@ def get_overview_data(cursor, mozilla_tiles, cache, country=False, locale=False,
 def convert_impressions_data_for_graph(data):
 	"""Converts the output of get_daily_impressions_data to a format useful in Highcharts"""
 	#data arrives as a list of lists, each sublist having 6 elements
-	
+
 	#way too much code repetition here
 	column_names = ['Date', "Impressions", "Clicks", "CTR", "Pins", "Blocks"]
 	list_of_dates = ["Date.UTC({0}, {1}, {2})".format(x[0].year, x[0].month-1, x[0].day) for x in data]
 	js_data = [[x, []] for x in column_names if x != 'Date']
-	
+
 	for row_index, row in enumerate(data):
 		for n, cell in enumerate(row[1:-1]): #ignore date
 			if (type(cell) == str) and cell.endswith("%"):
 				cell = cell[:-1]
 			js_data[n][1].append([list_of_dates[row_index], cell])
-	
+
 	return js_data
 
 ######### Other SQLish meta-data #########
@@ -909,4 +909,4 @@ def get_row_count(cursor, table_name):
 	print "Counting... (may take a while)"
 	cursor.execute("SELECT COUNT(*) FROM " + table_name + ";")
 	return cursor.fetchall()
-	
+
