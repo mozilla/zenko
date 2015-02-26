@@ -8,7 +8,9 @@
 from datetime import datetime
 from flask import Flask, render_template, request, make_response
 import zenko.redshift as redshift
-app = Flask(__name__)
+
+
+app = Flask('zenko')
 
 # set up database connection
 cursor = redshift.cursor()
