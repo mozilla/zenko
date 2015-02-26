@@ -17,13 +17,13 @@ from re import search
 from itertools import chain
 
 import psycopg2
-from zenko.login import login_string #login details, not committed
+from zenko.config import config
 
 ############# Basic caching and setup ##################
 
 def cursor():
     """Creates a cursor on the db for querying"""
-    conn = psycopg2.connect(login_string)
+    conn = psycopg2.connect(config.LOGIN_STRING)
     return conn.cursor()
 
 def build_tiles_cache(cursor):
