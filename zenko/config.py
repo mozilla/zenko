@@ -16,7 +16,6 @@ class DefaultConfig(object):
     user = 'read_only'
     password = 'secret'
 
-    @property
     def login_string(self):
         return ' '.join([
             "host='%s'" % self.host,
@@ -31,7 +30,7 @@ def load_config(object_name=os.environ.get('ZENKO_SETTINGS', DEFAULT_CONFIG)):
         sys.path.append(path)
     module_name, class_name = object_name.rsplit('.', 1)
     module = importlib.import_module(module_name)
-    return getattr(module, class_name)
+    return getattr(module, class_name)()
 
 
 config = load_config()

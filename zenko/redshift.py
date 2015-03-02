@@ -23,7 +23,7 @@ from zenko.config import config
 
 def cursor():
     """Creates a cursor on the db for querying"""
-    conn = psycopg2.connect(config.login_string)
+    conn = psycopg2.connect(config.login_string())
     return conn.cursor()
 
 
