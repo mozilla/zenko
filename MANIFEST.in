@@ -1,0 +1,4 @@
+include *
+recursive-include zenko/fixtures *
+recursive-include zenko/templates *
+recursive-include zenko/static *
