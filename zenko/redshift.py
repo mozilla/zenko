@@ -81,7 +81,7 @@ def build_tiles_cache(cursor):
             if tile[0] in tile_countries:
                 countries = sorted(list(tile_countries[tile[0]]))
             else:
-                []
+                countries = []
             cache[tile[0]] = {
                 'target_url': tile[1],
                 'bg_color': tile[2],
